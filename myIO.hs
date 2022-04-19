@@ -36,7 +36,13 @@ myGetChar' :: MyRealWorld -> (MyRealWorld, Char)
 myGetChar' w = (w { _inputBuffer = tail $ _inputBuffer w }, head $ _inputBuffer w)
 
 myGetLine :: MyIO String 
-myGetLine = undefined
+myGetLine = do
+  c <- myGetChar
+  if c == '\n'
+    then return []
+    else do
+      cs <- myGetLine
+      return (c:cs)
 
 runtimeWorld :: MyRealWorld
 runtimeWorld
@@ -59,3 +65,12 @@ helloworld = do
   myPutStr ['<', c2, '>']
 
 -- runMyIO helloworld rutimeWorld
+
+
+myGetLineTest :: MyIO ()
+myGetLineTest = do
+  s <- myGetLine
+  myPutStr $ "<" ++ s ++ ">"
+
+-- runMyIO myGetLineTest rutimeWorld
+
