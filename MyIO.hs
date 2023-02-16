@@ -18,36 +18,36 @@ runtimeRealWorld :: String -> String ->  RealWorld
 runtimeRealWorld consoleOut inputBuf
   = RealWorld { _consoleOut = consoleOut, _inputBuf = inputBuf}
 
-myPutStr' :: String -> RealWorld -> (RealWorld, ())
-myPutStr' s w = (w { _consoleOut = _consoleOut w ++ s}, ())
+myPutStr' :: String -> RealWorld -> ((), RealWorld)
+myPutStr' s w = ((), w { _consoleOut = _consoleOut w ++ s})
 
-myGetChar' :: RealWorld -> (RealWorld, Char)
-myGetChar' w = (w { _inputBuf = tail $ _inputBuf w }, head $ _inputBuf w)
+myGetChar' :: RealWorld -> (Char, RealWorld)
+myGetChar' w = (head $ _inputBuf w, w { _inputBuf = tail $ _inputBuf w })
 
 
 -----
 
-newtype MyIO a = MyIO { runMyIO :: RealWorld -> (RealWorld, a) }
+newtype MyIO a = MyIO { runMyIO :: RealWorld -> (a, RealWorld) }
 
 instance Functor MyIO where
   fmap :: (a -> b) -> MyIO a -> MyIO b
   fmap f (MyIO h) = MyIO $ \w ->
-    let (nw, v)  = h w
-    in  (nw, f v)
+    let (v, nw)  = h w
+    in  (f v, nw)
 
 instance Applicative MyIO where
   pure :: a -> MyIO a
-  pure a                = MyIO $ \w -> (w, a)
+  pure a                = MyIO $ \w -> (a, w)
   (<*>) :: MyIO (a -> b) -> MyIO a -> MyIO b
   (MyIO f) <*> (MyIO x) = MyIO $ \w ->
-    let (nw,  vf) = f w
-        (nw', vx) = x nw
-    in  (nw', vf vx)
+    let (vf,  nw) = f w
+        (vx, nw') = x nw
+    in  (vf vx, nw')
 
 instance Monad MyIO where
   (>>=) :: MyIO a -> (a -> MyIO b) -> MyIO b
   (MyIO h) >>= f  = MyIO $ \w ->
-    let (nw, v)   = h w
+    let (v, nw)   = h w
         (MyIO g)  = f v
     in g nw
 
