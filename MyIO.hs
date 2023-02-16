@@ -1,10 +1,33 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use tuple-section" #-}
+module MyIO (
+  RealWorld,
+  runtimeRealWorld,
+  --
+  MyIO (runMyIO),
+  myPutStr,
+  myGetChar,
+  myGetLine
+) where
+  
+-----
 
-data MyRealWorld = MyRealWorld { _consoleOutput :: String, _inputBuffer :: String } deriving (Show)
+data RealWorld = RealWorld { _consoleOut :: String, _inputBuf :: String } deriving (Show)
 
-newtype MyIO a = MyIO { runMyIO :: MyRealWorld -> (MyRealWorld, a) }
+runtimeRealWorld :: String -> String ->  RealWorld
+runtimeRealWorld consoleOut inputBuf
+  = RealWorld { _consoleOut = consoleOut, _inputBuf = inputBuf}
 
+myPutStr' :: String -> RealWorld -> (RealWorld, ())
+myPutStr' s w = (w { _consoleOut = _consoleOut w ++ s}, ())
+
+myGetChar' :: RealWorld -> (RealWorld, Char)
+myGetChar' w = (w { _inputBuf = tail $ _inputBuf w }, head $ _inputBuf w)
+
+
+-----
+
+newtype MyIO a = MyIO { runMyIO :: RealWorld -> (RealWorld, a) }
 
 instance Functor MyIO where
   fmap :: (a -> b) -> MyIO a -> MyIO b
@@ -31,14 +54,10 @@ instance Monad MyIO where
 myPutStr :: String -> MyIO ()
 myPutStr = MyIO . myPutStr'
 
-myPutStr' :: String -> MyRealWorld -> (MyRealWorld, ())
-myPutStr' s w = (w { _consoleOutput = _consoleOutput w ++ s}, ())
 
 myGetChar :: MyIO Char
 myGetChar = MyIO myGetChar'
 
-myGetChar' :: MyRealWorld -> (MyRealWorld, Char)
-myGetChar' w = (w { _inputBuffer = tail $ _inputBuffer w }, head $ _inputBuffer w)
 
 myGetLine :: MyIO String 
 myGetLine = do
@@ -48,36 +67,3 @@ myGetLine = do
     else do
       cs <- myGetLine
       return (c:cs)
-
-
------------------------------
-
--- initial World
-runtimeWorld :: MyRealWorld
-runtimeWorld
-  = MyRealWorld {
-      _consoleOutput = "hogefuga ",
-      _inputBuffer = "foobar\nmeaw" }
-
--- test 1
-helloworldTest :: MyIO ()
-helloworldTest = do
-  myPutStr "Hello"
-  myPutStr "World"
-  c1 <- myGetChar
-  c2 <- myGetChar
-  myPutStr ['<', c1, '>']
-  myPutStr ['<', c2, '>']
-
--- > runMyIO helloworldTest  runtimeWorld 
--- (MyRealWorld {_consoleOutput = "hogefuga HelloWorld<f><o>", _inputBuffer = "obar\nmeaw"},())
-
-
--- test 2
-myGetLineTest :: MyIO ()
-myGetLineTest = do
-  s <- myGetLine
-  myPutStr $ "<" ++ s ++ ">"
-
--- > runMyIO myGetLineTest runtimeWorld 
--- (MyRealWorld {_consoleOutput = "hogefuga <foobar>", _inputBuffer = "meaw"},())
