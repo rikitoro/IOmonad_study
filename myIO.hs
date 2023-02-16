@@ -1,7 +1,9 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use tuple-section" #-}
+
 data MyRealWorld = MyRealWorld { _consoleOutput :: String, _inputBuffer :: String } deriving (Show)
-newtype MyIO a = MyIO (MyRealWorld -> (MyRealWorld, a))
+
+newtype MyIO a = MyIO { runMyIO :: MyRealWorld -> (MyRealWorld, a) }
 
 
 instance Functor MyIO where
@@ -28,7 +30,6 @@ myPutStr = MyIO . myPutStr'
 myPutStr' :: String -> MyRealWorld -> (MyRealWorld, ())
 myPutStr' s w = (w { _consoleOutput = _consoleOutput w ++ s}, ())
 
-
 myGetChar :: MyIO Char
 myGetChar = MyIO myGetChar'
 
@@ -50,10 +51,6 @@ runtimeWorld
       _consoleOutput = "fugofugapuyo ",
       _inputBuffer = "A3b1c4df\ng45d" }
 
-
-
-runMyIO :: MyIO a -> MyRealWorld -> (MyRealWorld, a)
-runMyIO (MyIO f) = f
 
 helloworld :: MyIO ()
 helloworld = do
