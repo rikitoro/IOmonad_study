@@ -12,7 +12,14 @@ module MyIO (
   
 -----
 
-data RealWorld = RealWorld { _consoleOut :: String, _inputBuf :: String } deriving (Show)
+data RealWorld = RealWorld { _consoleOut :: String, _inputBuf :: String }
+
+instance Show RealWorld where
+  show :: RealWorld -> String
+  show w = 
+    "\n" ++
+    "Console : " ++ _consoleOut w ++ "\n" ++
+    "InputBuf: " ++ _inputBuf   w ++ "\n"
 
 runtimeRealWorld :: String -> String ->  RealWorld
 runtimeRealWorld consoleOut inputBuf
