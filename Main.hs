@@ -1,6 +1,8 @@
 module Main where
-import MyIO
-    ( MyIO, runMyIO, myPutStr, myGetChar, myGetLine, runtimeRealWorld, RealWorld ) 
+import MyIO ( 
+  MyIO, runMyIO, 
+  myPutChar, myPutStr, myGetChar, myGetLine, 
+  RealWorld, runtimeRealWorld ) 
 
 -- initial World
 world :: RealWorld
@@ -20,12 +22,12 @@ helloworldTest = do
   myPutStr "World"
   c1 <- myGetChar
   c2 <- myGetChar
-  myPutStr ['<', c1, '>']
-  myPutStr ['<', c2, '>']
+  myPutChar c2
+  myPutChar c1
 
 -- > runMyIO helloworldTest world 
 -- ((),
--- Console : hogefuga HelloWorld<f><o>
+-- Console : hogefuga HelloWorldof
 -- InputBuf: obar
 -- meaw
 -- )

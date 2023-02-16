@@ -5,6 +5,7 @@ module MyIO (
   runtimeRealWorld,
   --
   MyIO (runMyIO),
+  myPutChar,
   myPutStr,
   myGetChar,
   myGetLine
@@ -25,8 +26,11 @@ runtimeRealWorld :: String -> String ->  RealWorld
 runtimeRealWorld consoleOut inputBuf
   = RealWorld { _consoleOut = consoleOut, _inputBuf = inputBuf}
 
-myPutStr' :: String -> RealWorld -> ((), RealWorld)
-myPutStr' s w = ((), w { _consoleOut = _consoleOut w ++ s})
+myPutChar' :: Char -> RealWorld -> ((), RealWorld)
+myPutChar' c w = ((), w { _consoleOut = _consoleOut w ++ [c]})
+
+-- myPutStr' :: String -> RealWorld -> ((), RealWorld)
+-- myPutStr' s w = ((), w { _consoleOut = _consoleOut w ++ s})
 
 myGetChar' :: RealWorld -> (Char, RealWorld)
 myGetChar' w = (head $ _inputBuf w, w { _inputBuf = tail $ _inputBuf w })
@@ -58,13 +62,14 @@ instance Monad MyIO where
         (MyIO g)  = f v
     in g nw
 
-myPutStr :: String -> MyIO ()
-myPutStr = MyIO . myPutStr'
+myPutChar :: Char -> MyIO ()
+myPutChar = MyIO . myPutChar'
 
+myPutStr :: String -> MyIO ()
+myPutStr = mapM_ myPutChar  
 
 myGetChar :: MyIO Char
 myGetChar = MyIO myGetChar'
-
 
 myGetLine :: MyIO String 
 myGetLine = do
