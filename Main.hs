@@ -7,7 +7,7 @@ world :: RealWorld
 world = runtimeRealWorld "hogefuga " "foobar\nmeaw"
 
 -- > world
--- > RealWorld {_consoleOut = "hogefuga ", _inputBuf = "foobar\nmeaw"}
+-- RealWorld {_consoleOut = "hogefuga ", _inputBuf = "foobar\nmeaw"}
 
 
 -- test 1
