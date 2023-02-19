@@ -2,10 +2,10 @@
 {-# HLINT ignore "Use tuple-section" #-}
 
 module MyIO (
-  RealWorld,
-  mkRealWorld,
+  World,
+  mkWorld,
   --
-  MyIO (runMyIO),
+  MyIO ( asT ),
   myPutChar,
   myPutStr,
   myGetChar,
@@ -14,51 +14,69 @@ module MyIO (
   
 -----
 
-data RealWorld = RealWorld 
+-- simulate the World
+data World = World 
   { _consoleOut   :: String
   , _inputBuffer  :: String 
   } deriving Show
 
-mkRealWorld :: String -> String ->  RealWorld
-mkRealWorld consoleOut inputBuffer
-  = RealWorld { _consoleOut = consoleOut, _inputBuffer = inputBuffer }
+mkWorld :: String -> String -> World
+mkWorld consoleOut inputBuffer
+  = World { _consoleOut = consoleOut, _inputBuffer = inputBuffer }
 
-myPutChar' :: Char -> RealWorld -> ((), RealWorld)
-myPutChar' c w = ((), w { _consoleOut = _consoleOut w ++ [c]})
+myPutChar' :: Char -> World -> World
+myPutChar' c w = w { _consoleOut = _consoleOut w ++ [c]}
 
-myGetChar' :: RealWorld -> (Char, RealWorld)
+myGetChar' :: World -> (Char, World)
 myGetChar' w = (head $ _inputBuffer w, w { _inputBuffer = tail $ _inputBuffer w })
 
 -----
 
+-- Hiding the world
+-- see https://www.youtube.com/watch?v=fCoQb-zqYDI
+type WorldT a = World -> (a, World)
+
+myPutCharT :: Char -> WorldT ()
+myPutCharT c w = ((), myPutChar' c w)
+
+myGetCharT :: WorldT Char
+myGetCharT = myGetChar'
+
+-- bind operator
+infixl 1 >>>=
+(>>>=)  :: WorldT a         -- World -> (a, World)
+        -> (a -> WorldT b)  -- a -> World -> (b, World) 
+        -> WorldT b         -- World -> (b, World)
+wt >>>= f = uncurry f . wt
+
+----
+
+-- monad
 newtype MyIO a = MyIO {
-  runMyIO :: RealWorld -> (a, RealWorld) 
+  asT :: WorldT a
 }
 
 instance Functor MyIO where
   fmap :: (a -> b) -> MyIO a -> MyIO b
-  fmap f (MyIO h) = MyIO $ \w ->
-    let (v, nw)  = h w
-    in  (f v, nw)
+  fmap f wt = MyIO $
+    asT wt >>>= \x ->
+    asT $ pure $ f x 
 
 instance Applicative MyIO where
   pure :: a -> MyIO a
-  pure a                = MyIO $ \w -> (a, w)
+  pure a = MyIO $ \w -> (a, w)
   (<*>) :: MyIO (a -> b) -> MyIO a -> MyIO b
-  (MyIO f) <*> (MyIO x) = MyIO $ \w ->
-    let (vf,  nw) = f w
-        (vx, nw') = x nw
-    in  (vf vx, nw')
+  wtf <*> wtx = MyIO $ 
+    asT wtf >>>= \f ->
+    asT wtx >>>= \x ->
+    asT $ pure $ f x
 
 instance Monad MyIO where
   (>>=) :: MyIO a -> (a -> MyIO b) -> MyIO b
-  (MyIO h) >>= f  = MyIO $ \w ->
-    let (v, nw)   = h w
-        (MyIO g)  = f v
-    in g nw
+  wt >>= f = MyIO $ asT wt >>>= asT . f
 
 myPutChar :: Char -> MyIO ()
-myPutChar = MyIO . myPutChar'
+myPutChar = MyIO . myPutCharT
 
 myPutStr :: String -> MyIO ()
 myPutStr = mapM_ myPutChar  

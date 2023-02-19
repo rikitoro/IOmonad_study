@@ -1,15 +1,15 @@
 module Main where
 import MyIO ( 
-  MyIO, runMyIO, 
+  MyIO, 
   myPutChar, myPutStr, myGetChar, myGetLine, 
-  RealWorld, mkRealWorld ) 
+  World, mkWorld ) 
 
 -- initial World
-world :: RealWorld
-world = mkRealWorld "hogefuga " "bowwow\nmeow"
+world :: World
+world = mkWorld "hogefuga " "bowwow\nmeow"
 
 -- > world
--- RealWorld {_consoleOut = "hogefuga ", _inputBuffer = "bowwow\nmeow"}
+-- World {_consoleOut = "hogefuga ", _inputBuffer = "bowwow\nmeow"}
 
 
 -- test 1
@@ -23,7 +23,7 @@ helloworldTest = do
   myPutChar c1
 
 -- > runMyIO helloworldTest world 
--- ((),RealWorld {_consoleOut = "hogefuga HelloWorldob", _inputBuffer = "wwow\nmeow"})
+-- ((),World {_consoleOut = "hogefuga HelloWorldob", _inputBuffer = "wwow\nmeow"})
 
 -- test 2
 myGetLineTest :: MyIO ()
@@ -32,7 +32,7 @@ myGetLineTest = do
   myPutStr s
 
 -- > runMyIO myGetLineTest world 
--- ((),RealWorld {_consoleOut = "hogefuga bowwow", _inputBuffer = "meow"})
+-- ((),World {_consoleOut = "hogefuga bowwow", _inputBuffer = "meow"})
 
 
 main :: IO ()
