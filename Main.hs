@@ -2,17 +2,14 @@ module Main where
 import MyIO ( 
   MyIO, runMyIO, 
   myPutChar, myPutStr, myGetChar, myGetLine, 
-  RealWorld, runtimeRealWorld ) 
+  RealWorld, mkRealWorld ) 
 
 -- initial World
 world :: RealWorld
-world = runtimeRealWorld "hogefuga " "foobar\nmeaw"
+world = mkRealWorld "hogefuga " "bowwow\nmeow"
 
 -- > world
---
--- Console : hogefuga 
--- InputBuf: foobar
--- meaw
+-- RealWorld {_consoleOut = "hogefuga ", _inputBuffer = "bowwow\nmeow"}
 
 
 -- test 1
@@ -26,24 +23,17 @@ helloworldTest = do
   myPutChar c1
 
 -- > runMyIO helloworldTest world 
--- ((),
--- Console : hogefuga HelloWorldof
--- InputBuf: obar
--- meaw
--- )
-
+-- ((),RealWorld {_consoleOut = "hogefuga HelloWorldob", _inputBuffer = "wwow\nmeow"})
 
 -- test 2
 myGetLineTest :: MyIO ()
 myGetLineTest = do
   s <- myGetLine
-  myPutStr $ "<" ++ s ++ ">"
+  myPutStr s
 
 -- > runMyIO myGetLineTest world 
--- ((),
--- Console : hogefuga <foobar>
--- InputBuf: meaw
--- )
+-- ((),RealWorld {_consoleOut = "hogefuga bowwow", _inputBuffer = "meow"})
+
 
 main :: IO ()
 main = undefined

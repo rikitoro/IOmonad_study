@@ -1,8 +1,9 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use tuple-section" #-}
+
 module MyIO (
   RealWorld,
-  runtimeRealWorld,
+  mkRealWorld,
   --
   MyIO (runMyIO),
   myPutChar,
@@ -13,32 +14,26 @@ module MyIO (
   
 -----
 
-data RealWorld = RealWorld { _consoleOut :: String, _inputBuf :: String }
+data RealWorld = RealWorld 
+  { _consoleOut   :: String
+  , _inputBuffer  :: String 
+  } deriving Show
 
-instance Show RealWorld where
-  show :: RealWorld -> String
-  show w = 
-    "\n" ++
-    "Console : " ++ _consoleOut w ++ "\n" ++
-    "InputBuf: " ++ _inputBuf   w ++ "\n"
-
-runtimeRealWorld :: String -> String ->  RealWorld
-runtimeRealWorld consoleOut inputBuf
-  = RealWorld { _consoleOut = consoleOut, _inputBuf = inputBuf}
+mkRealWorld :: String -> String ->  RealWorld
+mkRealWorld consoleOut inputBuffer
+  = RealWorld { _consoleOut = consoleOut, _inputBuffer = inputBuffer }
 
 myPutChar' :: Char -> RealWorld -> ((), RealWorld)
 myPutChar' c w = ((), w { _consoleOut = _consoleOut w ++ [c]})
 
--- myPutStr' :: String -> RealWorld -> ((), RealWorld)
--- myPutStr' s w = ((), w { _consoleOut = _consoleOut w ++ s})
-
 myGetChar' :: RealWorld -> (Char, RealWorld)
-myGetChar' w = (head $ _inputBuf w, w { _inputBuf = tail $ _inputBuf w })
-
+myGetChar' w = (head $ _inputBuffer w, w { _inputBuffer = tail $ _inputBuffer w })
 
 -----
 
-newtype MyIO a = MyIO { runMyIO :: RealWorld -> (a, RealWorld) }
+newtype MyIO a = MyIO {
+  runMyIO :: RealWorld -> (a, RealWorld) 
+}
 
 instance Functor MyIO where
   fmap :: (a -> b) -> MyIO a -> MyIO b
