@@ -2,7 +2,7 @@
 {-# HLINT ignore "Use tuple-section" #-}
 
 module MyIO where 
-
+import Prelude hiding (IO)
 
 {-----------------------------}
 {-- Simulate the Real World --}
@@ -86,48 +86,59 @@ whatIsYourPureNameT =
 {-- Do-notation for WorldT --}
 {----------------------------}
 
-newtype MyIO a = MyIO { -- WorldM,
-  runMyIO :: WorldT a   -- asT in ref. [2]
+newtype IO a = IO {   -- WorldM,
+  runIO :: WorldT a   -- asT in ref. [2]
 }
 
-instance Functor MyIO where 
-  fmap :: (a -> b) -> MyIO a -> MyIO b
-  fmap f myio = MyIO $ 
-    runMyIO myio >>>= \x ->
-    runMyIO . pure $ f x
+instance Functor IO where 
+  fmap :: (a -> b) -> IO a -> IO b
+  fmap f (IO wt) = IO $ 
+    wt >>>= \x ->
+    runIO . pure $ f x
+  -- fmap f (IO wt) = IO $ \w ->
+  --   let (x, nw) = wt w 
+  --   in  (f x, nw)
 
-instance Applicative MyIO where 
-  pure :: a -> MyIO a
-  pure x = MyIO $ \w -> (x, w)
-  (<*>) :: MyIO (a -> b) -> MyIO a -> MyIO b
-  myiof <*> myio = MyIO $ 
-    runMyIO myiof >>>= \f ->
-    runMyIO myio  >>>= \x ->
-    runMyIO . pure $ f x
+instance Applicative IO where 
+  pure :: a -> IO a
+  pure x = IO $ \w -> (x, w)
+  (<*>) :: IO (a -> b) -> IO a -> IO b
+  (IO wtf) <*> (IO wt) = IO $ 
+    wtf >>>= \f ->
+    wt  >>>= \x ->
+    runIO . pure $ f x
+  -- (IO wtf) <*> (IO wt) = IO $ \w ->
+  --   let (f, w')   = wtf w 
+  --       (x, w'')  = wt w'
+  --   in  (f x, w'')
+    
+instance Monad IO where 
+  (>>=) :: IO a -> (a -> IO b) -> IO b
+  (IO wt) >>= f = IO $
+    wt >>>= runIO . f
+  -- (IO wt) >>= f = IO $ \w ->
+  --   let (x, w')   = wt w 
+  --       (IO wt')  = f x
+  --   in  wt' w'
 
-instance Monad MyIO where 
-  (>>=) :: MyIO a -> (a -> MyIO b) -> MyIO b
-  myio >>= f = MyIO $
-    runMyIO myio >>>= runMyIO . f
+printStrM :: String -> IO ()
+printStrM = IO . printStrT
 
-printStrM :: String -> MyIO ()
-printStrM = MyIO . printStrT
-
-readStrM :: MyIO String 
-readStrM = MyIO readStrT
+readStrM :: IO String 
+readStrM = IO readStrT
 
 
-whatIsYourPureNameM :: MyIO ()
+whatIsYourPureNameM :: IO ()
 whatIsYourPureNameM = do 
   printStrM "What is your name?"
   name <- readStrM 
   printStrM ("Hello " ++ name)
 
 -- (A)
--- ghci> runMyIO whatIsYourPureNameM initWorld 
+-- ghci> runIO whatIsYourPureNameM initWorld 
 -- ((),World {_consoleOut = "HOGE> What is your name?Hello Rikitoro", _inputBuffer = "meow"})
 -- (B)
--- ghci> runMyIO whatIsYourPureNameM initWorld 
+-- ghci> runIO whatIsYourPureNameM initWorld 
 -- ((),What is your name?
 -- Rikitoro
 -- Hello Rikitoro
