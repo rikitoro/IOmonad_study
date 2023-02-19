@@ -1,94 +1,134 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use tuple-section" #-}
 
-module MyIO (
-  World,
-  mkWorld,
-  --
-  MyIO ( asT ),
-  myPutChar,
-  myPutStr,
-  myGetChar,
-  myGetLine
-) where
-  
------
+module MyIO where 
 
--- simulate the World
-data World = World 
-  { _consoleOut   :: String
-  , _inputBuffer  :: String 
-  } deriving Show
 
-mkWorld :: String -> String -> World
-mkWorld consoleOut inputBuffer
-  = World { _consoleOut = consoleOut, _inputBuffer = inputBuffer }
+{-----------------------------}
+{-- Simulate the Real World --}
+{-----------------------------}
 
-myPutChar' :: Char -> World -> World
-myPutChar' c w = w { _consoleOut = _consoleOut w ++ [c]}
+-- (A)
+import World ( World ( World ), _inputBuffer, _consoleOut, printStr, readStr ) 
+initWorld :: World
+initWorld = World { _inputBuffer = "Rikitoro\nmeow", _consoleOut = "HOGE> "}
 
-myGetChar' :: World -> (Char, World)
-myGetChar' w = (head $ _inputBuffer w, w { _inputBuffer = tail $ _inputBuffer w })
+-- or, (B)
+{- 
+import Secret ( World ( World ), printStr, readStr )
+initWorld :: World
+initWorld = World
+-}
 
------
+-- (A)
+-- ghci> initWorld
+-- World {_consoleOut = "HOGE> ", _inputBuffer = "Rikitoro\nmeow"}
+-- (B)
+-- ghci> initWorld 
+-- World
 
--- Hiding the world
--- see https://www.youtube.com/watch?v=fCoQb-zqYDI
+
+whatIsYourPureName :: World -> World 
+whatIsYourPureName w1 = w4 
+  where 
+    w2          = printStr "What is your name?" w1 
+    (name, w3)  = readStr w2 
+    w4          = printStr ("Hello " ++ name) w3 
+
+-- (A)
+-- ghci> whatIsYourPureName initWorld 
+-- World {_consoleOut = "HOGE> What is your name?Hello Rikitoro", _inputBuffer = "meow"}
+-- (B)
+-- ghci> whatIsYourPureName initWorld 
+-- What is your name?
+-- Rikitoro
+-- Hello Rikitoro
+-- World
+
+
+{----------------------}
+{-- Hiding the World --}
+{----------------------}
+
 type WorldT a = World -> (a, World)
 
-myPutCharT :: Char -> WorldT ()
-myPutCharT c w = ((), myPutChar' c w)
+readStrT :: WorldT String
+readStrT = readStr
 
-myGetCharT :: WorldT Char
-myGetCharT = myGetChar'
+printStrT :: String -> WorldT () 
+printStrT str w = ((), printStr str w)
 
--- bind operator
 infixl 1 >>>=
 (>>>=)  :: WorldT a         -- World -> (a, World)
-        -> (a -> WorldT b)  -- a -> World -> (b, World) 
+        -> (a -> WorldT b)  -- a -> World -> (b, World)
         -> WorldT b         -- World -> (b, World)
 wt >>>= f = uncurry f . wt
 
-----
 
--- monad
-newtype MyIO a = MyIO {
-  asT :: WorldT a
+whatIsYourPureNameT :: WorldT ()
+whatIsYourPureNameT =
+  printStrT "What is your name?" >>>= \_ ->
+  readStrT >>>= \name ->
+  printStrT $ "Hello " ++ name
+
+-- (A)
+-- ghci> whatIsYourPureNameT initWorld 
+-- ((),World {_consoleOut = "HOGE> What is your name?Hello Rikitoro", _inputBuffer = "meow"})
+-- (B)
+-- ghci> whatIsYourPureNameT initWorld 
+-- ((),What is your name?
+-- Rikitoro
+-- Hello Rikitoro
+-- World)
+
+
+{----------------------------}
+{-- Do-notation for WorldT --}
+{----------------------------}
+
+newtype MyIO a = MyIO { -- WorldM,
+  runMyIO :: WorldT a   -- asT in ref. [2]
 }
 
-instance Functor MyIO where
+instance Functor MyIO where 
   fmap :: (a -> b) -> MyIO a -> MyIO b
-  fmap f wt = MyIO $
-    asT wt >>>= \x ->
-    asT $ pure $ f x 
+  fmap f myio = MyIO $ 
+    runMyIO myio >>>= \x ->
+    runMyIO . pure $ f x
 
-instance Applicative MyIO where
+instance Applicative MyIO where 
   pure :: a -> MyIO a
-  pure a = MyIO $ \w -> (a, w)
+  pure x = MyIO $ \w -> (x, w)
   (<*>) :: MyIO (a -> b) -> MyIO a -> MyIO b
-  wtf <*> wtx = MyIO $ 
-    asT wtf >>>= \f ->
-    asT wtx >>>= \x ->
-    asT $ pure $ f x
+  myiof <*> myio = MyIO $ 
+    runMyIO myiof >>>= \f ->
+    runMyIO myio  >>>= \x ->
+    runMyIO . pure $ f x
 
-instance Monad MyIO where
+instance Monad MyIO where 
   (>>=) :: MyIO a -> (a -> MyIO b) -> MyIO b
-  wt >>= f = MyIO $ asT wt >>>= asT . f
+  myio >>= f = MyIO $
+    runMyIO myio >>>= runMyIO . f
 
-myPutChar :: Char -> MyIO ()
-myPutChar = MyIO . myPutCharT
+printStrM :: String -> MyIO ()
+printStrM = MyIO . printStrT
 
-myPutStr :: String -> MyIO ()
-myPutStr = mapM_ myPutChar  
+readStrM :: MyIO String 
+readStrM = MyIO readStrT
 
-myGetChar :: MyIO Char
-myGetChar = MyIO myGetChar'
 
-myGetLine :: MyIO String 
-myGetLine = do
-  c <- myGetChar
-  if c == '\n'
-    then return []
-    else do
-      cs <- myGetLine
-      return (c:cs)
+whatIsYourPureNameM :: MyIO ()
+whatIsYourPureNameM = do 
+  printStrM "What is your name?"
+  name <- readStrM 
+  printStrM ("Hello " ++ name)
+
+-- (A)
+-- ghci> runMyIO whatIsYourPureNameM initWorld 
+-- ((),World {_consoleOut = "HOGE> What is your name?Hello Rikitoro", _inputBuffer = "meow"})
+-- (B)
+-- ghci> runMyIO whatIsYourPureNameM initWorld 
+-- ((),What is your name?
+-- Rikitoro
+-- Hello Rikitoro
+-- World)
